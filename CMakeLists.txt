@@ -461,14 +461,17 @@ endif(BUILD_DOC)
 # Python
 # ----------------------------------------------------------------------------
 option(ENABLE_PYTHON "Create python library via SWIG" ON)
-find_package(PythonInterp)
-find_package(PythonLibs)
+#find_package(PythonInterp)
+#find_package(PythonLibs)
 
-if(ENABLE_PYTHON AND PYTHONLIBS_FOUND)
+set(Python_FIND_VIRTUALENV FIRST)
+find_package(Python COMPONENTS Interpreter Development NumPy)
+
+if(ENABLE_PYTHON AND Python_FOUND)
 
   find_package(SWIG 3.0 REQUIRED)
   include(python/Python.cmake)
-  include_directories(${PYTHON_INCLUDE_PATH})
+  include_directories(${Python_INCLUDE_DIRS})
 
   if(SWIG_VERSION VERSION_GREATER 4.0)
     # Use swig 4 builtin doxygen instead of external program
@@ -486,26 +489,27 @@ if(ENABLE_PYTHON AND PYTHONLIBS_FOUND)
 
   if(ENABLE_SWIG_BUILTIN)
     set(BUILTIN "-builtin")
-    set(PY3 "-py3")
+#    set(PY3 "-py3")
   else(ENABLE_SWIG_BUILTIN)
     set(BUILTIN "")
-    set(PY3 "")
+#    set(PY3 "")
   endif(ENABLE_SWIG_BUILTIN)
 
-  if(PYTHON_VERSION_STRING VERSION_GREATER 3.0)
+  if(Python_VERSION VERSION_GREATER 3.0)
     list(APPEND CRPROPA_SWIG_DEFINES -DSWIG_PYTHON3)
-  endif(PYTHON_VERSION_STRING VERSION_GREATER 3.0)
+    set(PY3 "-py3")
+  endif(Python_VERSION VERSION_GREATER 3.0)
 
   # tries to import numpy
-  execute_process(COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/python/checkNumpy.py" OUTPUT_VARIABLE numpyIncludePath)
-  if(numpyIncludePath)
-    MESSAGE(STATUS "Found numpy headers in " ${numpyIncludePath})
+  #execute_process(COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/python/checkNumpy.py" OUTPUT_VARIABLE numpyIncludePath)
+  #if(numpyIncludePath)
+    MESSAGE(STATUS "Found numpy headers in " ${Python_NumPy_INCLUDE_DIRS})
     SET(CMAKE_SWIG_FLAGS -DWITHNUMPY ${CRP})
     list(APPEND CRPROPA_SWIG_DEFINES -DWITHNUMPY)
-    include_directories(${numpyIncludePath})
-  else(numpyIncludePath)
-    MESSAGE(STATUS "Numpy not found.")
-  endif(numpyIncludePath)
+    include_directories(${Python_NumPy_INCLUDE_DIRS})
+  #else(numpyIncludePath)
+  #  MESSAGE(STATUS "Numpy not found.")
+  #endif(numpyIncludePath)
 
   set(SWIG_INCLUDES)
   foreach(p in ${SWIG_INCLUDE_DIRECTORIES})
@@ -522,19 +526,19 @@ if(ENABLE_PYTHON AND PYTHONLIBS_FOUND)
     add_dependencies(crpropa-swig-wrapper docstrings_from_doxy)
   endif(BUILD_DOC AND DOXYGEN_FOUND)
 
-  add_library(crpropa-swig MODULE ${CMAKE_CURRENT_BINARY_DIR}/crpropa_wrap.cxx)
+  Python_add_library(crpropa-swig MODULE ${CMAKE_CURRENT_BINARY_DIR}/crpropa_wrap.cxx)
   set_target_properties(crpropa-swig PROPERTIES PREFIX "")
   # disable warnings on automatically generated interface code
   set_target_properties(crpropa-swig PROPERTIES COMPILE_FLAGS "-w")
   set_target_properties(crpropa-swig PROPERTIES OUTPUT_NAME "_crpropa")
-  target_link_libraries(crpropa-swig crpropa ${PYTHON_LIBRARIES})
+  target_link_libraries(crpropa-swig PUBLIC crpropa)
   add_dependencies(crpropa-swig crpropa-swig-wrapper)
 
-  install(DIRECTORY "${CMAKE_SOURCE_DIR}/python/crpropa" DESTINATION "${PYTHON_SITE_PACKAGES}")
-  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/crpropa.py" DESTINATION "${PYTHON_SITE_PACKAGES}/crpropa")
-  install(TARGETS crpropa-swig LIBRARY DESTINATION "${PYTHON_SITE_PACKAGES}/crpropa")
+  install(DIRECTORY "${CMAKE_SOURCE_DIR}/python/crpropa" DESTINATION "${Python_SITEARCH}")
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/crpropa.py" DESTINATION "${Python_SITEARCH}/crpropa")
+  install(TARGETS crpropa-swig LIBRARY DESTINATION "${Python_SITEARCH}/crpropa")
   install(FILES ${CRPROPA_SWIG_INPUTS} DESTINATION share/crpropa/swig_interface)
-endif(ENABLE_PYTHON AND PYTHONLIBS_FOUND)
+endif(ENABLE_PYTHON AND Python_FOUND)
 
 
 # ----------------------------------------------------------------------------
@@ -651,20 +655,20 @@ if(ENABLE_TESTING)
   endif(WITH_GALACTIC_LENSES)
 
   # python tests
-  if(ENABLE_PYTHON AND PYTHONLIBS_FOUND)
+  if(ENABLE_PYTHON AND Python_FOUND)
     CONFIGURE_FILE(test/testMagneticLensPythonInterface.py testMagneticLensPythonInterface.py COPYONLY)
-    if(numpyIncludePath AND WITH_GALACTIC_LENSES)
-      add_test(testMagneticLensPythonInterface ${PYTHON_EXECUTABLE} testMagneticLensPythonInterface.py)
-    endif(numpyIncludePath AND WITH_GALACTIC_LENSES)
+    #if(numpyIncludePath AND WITH_GALACTIC_LENSES)
+      add_test(testMagneticLensPythonInterface ${Python_EXECUTABLE} testMagneticLensPythonInterface.py)
+    #endif(numpyIncludePath AND WITH_GALACTIC_LENSES)
 
     CONFIGURE_FILE(test/testSimulationExecution.py testSimulationExecution.py COPYONLY)
-    add_test(testSimulationExecution ${PYTHON_EXECUTABLE} testSimulationExecution.py)
+    add_test(testSimulationExecution ${Python_EXECUTABLE} testSimulationExecution.py)
 
     CONFIGURE_FILE(test/testDiffusionSDE.py testDiffusionSDE.py COPYONLY)
-    add_test(testDiffusionSDE ${PYTHON_EXECUTABLE} testDiffusionSDE.py)
+    add_test(testDiffusionSDE ${Python_EXECUTABLE} testDiffusionSDE.py)
 
     CONFIGURE_FILE(test/testPythonExtension.py testPythonExtension.py COPYONLY)
-    add_test(testPythonExtension ${PYTHON_EXECUTABLE} testPythonExtension.py)
-  endif(ENABLE_PYTHON AND PYTHONLIBS_FOUND)
+    add_test(testPythonExtension ${Python_EXECUTABLE} testPythonExtension.py)
+  endif(ENABLE_PYTHON AND Python_FOUND)
 
 endif(ENABLE_TESTING)
