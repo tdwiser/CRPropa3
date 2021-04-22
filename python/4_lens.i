@@ -120,14 +120,15 @@
       int ndim = 0;
       npy_intp dims[NPY_MAXDIMS];
 
-      PyArrayObject *particleIds_arr = NULL;
+/*      PyArrayObject *particleIds_arr = NULL;
       PyArray_Descr *particleIds_dtype = NULL;
       if (PyArray_GetArrayParamsFromObject(particleIds, NULL, 1,
             &particleIds_dtype, &ndim, dims, &particleIds_arr, NULL) < 0)
         { Py_RETURN_NONE; };
       if (particleIds_arr == NULL)
         Py_RETURN_NONE;
-
+*/
+      PyArrayObject *particleIds_arr = PyArray_GETCONTIGUOUS((PyArrayObject*)particleIds);
 
       int intSize = 0;
       // check integer type
@@ -146,46 +147,45 @@
       }
 
 
-
       npy_intp *D = PyArray_DIMS(particleIds_arr);
       int arraySize = D[0];
-
-      PyArrayObject *energies_arr = NULL;
-      PyArray_Descr *energies_dtype = NULL;
-
+      
+      PyArrayObject *energies_arr = PyArray_GETCONTIGUOUS((PyArrayObject*)energies);
+/*      PyArray_Descr *energies_dtype = NULL;*/
+/*
       if (PyArray_GetArrayParamsFromObject(energies, NULL, 1,
             &energies_dtype, &ndim, dims, &energies_arr,
             NULL) < 0)
         { Py_RETURN_NONE; };
       if (energies_arr == NULL)
         Py_RETURN_NONE;
-
-      PyArrayObject *galacticLongitudes_arr = NULL;
-      PyArray_Descr *galacticLongitudes_dtype = NULL;
+*/
+      PyArrayObject *galacticLongitudes_arr = PyArray_GETCONTIGUOUS((PyArrayObject*)galacticLongitudes);
+ /*     PyArray_Descr *galacticLongitudes_dtype = NULL;
       if (PyArray_GetArrayParamsFromObject(galacticLongitudes, NULL, 1,
             &galacticLongitudes_dtype, &ndim, dims, &galacticLongitudes_arr,
             NULL) < 0)
         { Py_RETURN_NONE; };
       if (galacticLongitudes_arr == NULL)
         Py_RETURN_NONE;
-
-      PyArrayObject *galacticLatitudes_arr = NULL;
-      PyArray_Descr *galacticLatitudes_dtype = NULL;
+*/
+      PyArrayObject *galacticLatitudes_arr = PyArray_GETCONTIGUOUS((PyArrayObject*)galacticLatitudes);
+/*      PyArray_Descr *galacticLatitudes_dtype = NULL;
       if (PyArray_GetArrayParamsFromObject(galacticLatitudes, NULL, 1,
             &galacticLatitudes_dtype, &ndim, dims, &galacticLatitudes_arr,
             NULL) < 0)
         { Py_RETURN_NONE; };
       if (galacticLatitudes_arr == NULL)
-        Py_RETURN_NONE;
+        Py_RETURN_NONE;*/
 
-      PyArrayObject *weights_arr = NULL;
-      PyArray_Descr *weights_dtype = NULL;
+      PyArrayObject *weights_arr = PyArray_GETCONTIGUOUS((PyArrayObject*)weights);
+/*      PyArray_Descr *weights_dtype = NULL;
       if (PyArray_GetArrayParamsFromObject(weights, NULL, 1,
             &weights_dtype, &ndim, dims, &weights_arr,
             NULL) < 0)
         { Py_RETURN_NONE; };
       if (weights_arr == NULL)
-        Py_RETURN_NONE;
+        Py_RETURN_NONE;*/
 
       void *particleIds_dp = PyArray_DATA(particleIds_arr);
       double *energies_dp = (double*) PyArray_DATA(energies_arr);
@@ -251,25 +251,30 @@
           galacticLatitudes);
 
       npy_intp size = N;
-      PyObject *oId = PyArray_SimpleNew(1, &size, NPY_INT);
-      PyObject *oEnergy = PyArray_SimpleNew(1, &size, NPY_DOUBLE);
-      PyObject *oLon = PyArray_SimpleNew(1, &size, NPY_DOUBLE);
-      PyObject *oLat = PyArray_SimpleNew(1, &size, NPY_DOUBLE);
+      PyArrayObject *oId = (PyArrayObject*)PyArray_New(&PyArray_Type, 1, &size, NPY_INT, NULL, NULL, 0, NPY_ARRAY_CARRAY, NULL);
+      PyArrayObject *oEnergy = (PyArrayObject*)PyArray_New(&PyArray_Type, 1, &size, NPY_DOUBLE, NULL, NULL, 0, NPY_ARRAY_CARRAY, NULL);
+      PyArrayObject *oLon = (PyArrayObject*)PyArray_New(&PyArray_Type, 1, &size, NPY_DOUBLE, NULL, NULL, 0, NPY_ARRAY_CARRAY, NULL);
+      PyArrayObject *oLat = (PyArrayObject*)PyArray_New(&PyArray_Type, 1, &size, NPY_DOUBLE, NULL, NULL, 0, NPY_ARRAY_CARRAY, NULL);
 
-      memcpy(PyArray_DATA((PyArrayObject *) oId), &particleId[0],
+      memcpy(PyArray_DATA(oId), &particleId[0],
           particleId.size() * sizeof(int));
-      memcpy(PyArray_DATA((PyArrayObject *) oEnergy), &energy[0], energy.size()
+      memcpy(PyArray_DATA(oEnergy), &energy[0], energy.size()
           * sizeof(double));
-      memcpy(PyArray_DATA((PyArrayObject *) oLon), &galacticLongitudes[0],
+      memcpy(PyArray_DATA(oLon), &galacticLongitudes[0],
           galacticLongitudes.size() * sizeof(double));
-      memcpy(PyArray_DATA((PyArrayObject *) oLat), &galacticLatitudes[0],
+      memcpy(PyArray_DATA(oLat), &galacticLatitudes[0],
           galacticLatitudes.size() * sizeof(double));
 
+      PyGILState_STATE gstate = PyGILState_Ensure();
+
       PyObject *returnList = PyList_New(4);
-      PyList_SET_ITEM(returnList, 0, oId);
-      PyList_SET_ITEM(returnList, 1, oEnergy);
-      PyList_SET_ITEM(returnList, 2, oLon);
-      PyList_SET_ITEM(returnList, 3, oLat);
+      PyList_SET_ITEM(returnList, 0, (PyObject*)oId);
+      PyList_SET_ITEM(returnList, 1, (PyObject*)oEnergy);
+      PyList_SET_ITEM(returnList, 2, (PyObject*)oLon);
+      PyList_SET_ITEM(returnList, 3, (PyObject*)oLat);
+      
+      PyGILState_Release(gstate);
+      
       return returnList;
   }
 
